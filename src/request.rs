@@ -1,8 +1,6 @@
 use crate::header;
 use crate::Methods;
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader};
-use std::net::TcpStream;
 
 #[derive(Debug, Clone)]
 pub struct Request {
@@ -20,30 +18,27 @@ pub struct Request {
 // }
 
 impl Request {
-    pub fn new(mut stream: &TcpStream) -> Request{
-        let mut buf_reader = BufReader::new(&mut stream);
-
-        let http_request: Vec<u8> = buf_reader.fill_buf().unwrap().to_vec();
+    pub fn new(http_request: Vec<u8>) -> Request{
         let http_request_str: String = String::from_utf8_lossy(&http_request).to_string();
         let mut body_startidx = 0;
         if let Some(header_end) = http_request_str.find("\r\n\r\n") {
             // Return everything after the headers as the body
             body_startidx = header_end + 4;
         }
+        println!("{}",body_startidx);
         let var_name = &http_request_str[..body_startidx - 4];
         let headers = var_name;
-        println!("body idx {} \n\n\n\n\n\n\n {:?}",body_startidx,&headers);
+        // println!("body idx {} \n\n\n\n\n\n\n {:?}",body_startidx,&headers);
         let split_headers = headers.split("\r\n").collect::<Vec<&str>>();
         // MPV = method path version
         let method_path_version: Vec<&str> = split_headers[0].split(" ").collect();
         let parsed_headers = header::Headers::new(&split_headers[1..]);
-
         match method_path_version[0] {
             "GET" => Request {
                 method: Methods::Get,
                 path: method_path_version[1].to_string(),
                 version: method_path_version[2].to_string(),
-                headers: parsed_headers,
+                headers: parsed_headers.headers,
                 body: None,
             },
             "POST" => {
@@ -52,7 +47,7 @@ impl Request {
                     method: Methods::Post,
                     path: method_path_version[1].to_string(),
                     version: method_path_version[2].to_string(),
-                    headers: parsed_headers,
+                    headers: parsed_headers.headers,
                     body: Some(body),
                 }
             },
