@@ -1,15 +1,18 @@
 use crate::header;
+use crate::header::Headers;
 use crate::Methods;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Request {
-    pub method: Methods,
-    pub path: String,
-    pub version: String,
-    pub headers: HashMap<String, String>,
-    pub body: Option<Vec<u8>>,
+    method: Methods,
+    path: String,
+    version: String,
+    pub headers: Headers,
+    body: Option<Vec<u8>>,
+    body_length: Option<usize>,
 }
+
 // #[derive(Debug, Clone)]
 // pub enum Typo{
 //     File(u8),
@@ -38,8 +41,9 @@ impl Request {
                 method: Methods::Get,
                 path: method_path_version[1].to_string(),
                 version: method_path_version[2].to_string(),
-                headers: parsed_headers.headers,
+                headers: parsed_headers,
                 body: None,
+                body_length:None
             },
             "POST" => {
                 let body = http_request[body_startidx..].to_vec();
@@ -47,7 +51,8 @@ impl Request {
                     method: Methods::Post,
                     path: method_path_version[1].to_string(),
                     version: method_path_version[2].to_string(),
-                    headers: parsed_headers.headers,
+                    headers: parsed_headers,
+                    body_length:Some(*&body.len()),
                     body: Some(body),
                 }
             },
@@ -56,6 +61,20 @@ impl Request {
             }
         }
     }
+    pub fn get_headers(&self) -> &Headers{
+        &self.headers
+    }
+    pub fn get_method(&self) -> &Methods{
+        &self.method
+    }
+    pub fn get_path(&self) -> &String{
+        &self.path
+    }
+
+
+
+
+
     // pub fn parse(data: &Vec<S>) -> Request {
     //     // println!("{}",data[0]);
     //     let headers = header::Headers::new(data);

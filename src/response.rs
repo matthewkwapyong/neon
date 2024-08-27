@@ -1,16 +1,16 @@
-use crate::header::Headers;
+use crate::{header::Headers, response};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Response {
-    status:u16,
+    pub status: u16,
     pub headers: Headers,
     pub body: Vec<u8>,
 }
 impl Response {
     pub fn build() -> Response {
         Response {
-            status:200,
+            status: 200,
             headers: Headers {
                 headers: HashMap::new(),
             },
@@ -28,18 +28,19 @@ impl Response {
     }
 
     pub fn parse(&mut self) -> Vec<u8> {
-        // res.head("\r\n");
         // self.headers.push("\r\n".to_string());
-        let mut man: Vec<u8> = vec![];
-        let code = format!("HTTP/1.1 {} OK\r\n",self.status).as_bytes().to_vec();
-        let mut response = Headers::parse_to_u8(&self.headers);
-        man.extend(code);
-        man.extend(&response);
+        let mut response: Vec<u8> = vec![];
+        let code = format!("HTTP/1.1 {} OK\r\n", self.status)
+            .as_bytes()
+            .to_vec();
+        let header_raw = Headers::parse_to_u8(&self.headers);
+        response.extend(code);
+        response.extend(&header_raw);
+        response.extend("\r\n\r\n".as_bytes());
         response.extend(&self.body);
         response
     }
 }
-
-
-
-
+pub trait Body{
+     fn parse() -> Vec<u8>;
+}
