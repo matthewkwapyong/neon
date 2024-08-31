@@ -21,14 +21,13 @@ pub struct Request {
 // }
 
 impl Request {
-    pub fn new(http_request: Vec<u8>) -> Request{
+    pub fn new(http_request: Vec<u8>) -> Request {
         let http_request_str: String = String::from_utf8_lossy(&http_request).to_string();
         let mut body_startidx = 0;
         if let Some(header_end) = http_request_str.find("\r\n\r\n") {
             // Return everything after the headers as the body
             body_startidx = header_end + 4;
         }
-        println!("{}",body_startidx);
         let var_name = &http_request_str[..body_startidx - 4];
         let headers = var_name;
         // println!("body idx {} \n\n\n\n\n\n\n {:?}",body_startidx,&headers);
@@ -37,14 +36,17 @@ impl Request {
         let method_path_version: Vec<&str> = split_headers[0].split(" ").collect();
         let parsed_headers = header::Headers::new(&split_headers[1..]);
         match method_path_version[0] {
-            "GET" => Request {
-                method: Methods::Get,
-                path: method_path_version[1].to_string(),
-                version: method_path_version[2].to_string(),
-                headers: parsed_headers,
-                body: None,
-                body_length:None
-            },
+            "GET" => {
+                let body = http_request[body_startidx..].to_vec();
+                Request {
+                    method: Methods::Get,
+                    path: method_path_version[1].to_string(),
+                    version: method_path_version[2].to_string(),
+                    headers: parsed_headers,
+                    body_length: Some(body.len()),
+                    body: Some(body),
+                }
+            }
             "POST" => {
                 let body = http_request[body_startidx..].to_vec();
                 Request {
@@ -52,28 +54,24 @@ impl Request {
                     path: method_path_version[1].to_string(),
                     version: method_path_version[2].to_string(),
                     headers: parsed_headers,
-                    body_length:Some(*&body.len()),
+                    body_length: Some(body.len()),
                     body: Some(body),
                 }
-            },
+            }
             _ => {
                 panic!("method error")
             }
         }
     }
-    pub fn get_headers(&self) -> &Headers{
+    pub fn get_headers(&self) -> &Headers {
         &self.headers
     }
-    pub fn get_method(&self) -> &Methods{
+    pub fn get_method(&self) -> &Methods {
         &self.method
     }
-    pub fn get_path(&self) -> &String{
+    pub fn get_path(&self) -> &String {
         &self.path
     }
-
-
-
-
 
     // pub fn parse(data: &Vec<S>) -> Request {
     //     // println!("{}",data[0]);

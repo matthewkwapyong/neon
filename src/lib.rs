@@ -2,14 +2,18 @@ pub mod header;
 pub mod request;
 pub mod response;
 use request::Request;
-use response::Response;
+use response::{Response};
 
 use std::io::{self, BufRead, BufReader};
 use std::net::{Incoming, SocketAddr, TcpStream, ToSocketAddrs};
+use std::ops::{Deref, DerefMut};
 // use std::io::prelude::*;SocketAddr
 use std::process;
 use std::thread;
 use std::{io::Write, net::TcpListener};
+// use proc_macro::TokenStream;
+
+// use syn;
 // use std::sync::mpsc;
 // mod self::header;
 // use std::time::Duration;
@@ -19,11 +23,7 @@ use std::{io::Write, net::TcpListener};
 // use serde_json::Result;
 
 pub struct Http {
-    port: u16,
     listener: TcpListener,
-}
-pub struct IncomingConnections<'a> {
-    listener: &'a TcpListener,
 }
 #[derive(Clone)]
 pub(crate) struct Route {
@@ -41,9 +41,40 @@ pub enum Methods {
     Post,
     None,
 }
+pub struct IncomingConnections<'a> {
+    listener: &'a TcpListener,
+}
+pub struct ResponseStream{
+    pub stream:TcpStream,
+    pub response:Response
+}
+impl Deref for ResponseStream {
+    type Target = Response;
+    fn deref(&self) -> &Self::Target {
+        &self.response
+    }
+}
 
+
+impl ResponseStream{
+    pub fn new(stream:TcpStream) -> Self{
+        Self{
+            stream,
+            response:Response::build()
+        }
+    }
+    pub fn body(mut self,body:Vec<u8>){
+        self.response.body(body);
+    }
+}
+
+impl Drop for ResponseStream{
+    fn drop(&mut self) {
+        self.stream.write(&&self.response.raw()).unwrap();
+    }
+}
 impl<'a> Iterator for IncomingConnections<'a> {
-    type Item = io::Result<Request>;
+    type Item = io::Result<(Request,ResponseStream)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // `accept` will block until a new connection is available
@@ -51,7 +82,8 @@ impl<'a> Iterator for IncomingConnections<'a> {
             let mut buf_reader = BufReader::new(&mut stream);
             let http_request: Vec<u8> = buf_reader.fill_buf().unwrap().to_vec();
             let request = request::Request::new(http_request);
-            request
+            let r = ResponseStream::new(stream);
+            (request,r)
         }))
     }
 }
@@ -76,7 +108,6 @@ impl Router {
             handler: handler,
         });
     }
-    pub fn run(self, http: Http) {}
 }
 
 // impl Routes {
@@ -97,7 +128,6 @@ impl Http {
     pub fn new<A: ToSocketAddrs>(addr: A) -> Result<Http, std::io::Error> {
         let listener = TcpListener::bind(addr)?;
         Ok(Http {
-            port: 3000,
             listener: listener,
         })
     }
@@ -123,15 +153,15 @@ impl Http {
                         seen = true;
                         let mut response = Response::build();
                         (i.handler)(&request, &mut response);
-                        let response: Vec<u8> = response.parse();
+                        let response: Vec<u8> = response.raw();
                         stream.write(&response).unwrap();
                         stream.flush().unwrap();
                         break;
                     }
                 }
                 if !seen {
-                    let h = ["HTTP/1.1 404 NOTFOUND ", "\r\n"];
-                    let mut response: Vec<u8> = h.join("\r\n").to_string().into_bytes();
+                    let raw = ["HTTP/1.1 404 NOTFOUND ", "\r\n"];
+                    let mut response: Vec<u8> = raw.join("\r\n").to_string().into_bytes();
                     response.extend(format!("NotFound",).as_bytes());
                     stream.write(&response).unwrap();
                     stream.flush().unwrap();
