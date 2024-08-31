@@ -2,13 +2,11 @@ pub mod header;
 pub mod request;
 pub mod response;
 use request::Request;
-use response::{Response};
-
+use response::{Response,ResponseStream};
 use std::io::{self, BufRead, BufReader};
-use std::net::{Incoming, SocketAddr, TcpStream, ToSocketAddrs};
-use std::ops::{Deref, DerefMut};
+use std::net::ToSocketAddrs;
 // use std::io::prelude::*;SocketAddr
-use std::process;
+// use std::process;
 use std::thread;
 use std::{io::Write, net::TcpListener};
 // use proc_macro::TokenStream;
@@ -34,44 +32,17 @@ pub(crate) struct Route {
 pub struct Router {
     routes: Vec<Route>,
 }
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Methods {
     Get,
     Post,
+    Option,
+    Put,
     None,
 }
+
 pub struct IncomingConnections<'a> {
     listener: &'a TcpListener,
-}
-pub struct ResponseStream{
-    pub stream:TcpStream,
-    pub response:Response
-}
-impl Deref for ResponseStream {
-    type Target = Response;
-    fn deref(&self) -> &Self::Target {
-        &self.response
-    }
-}
-
-
-impl ResponseStream{
-    pub fn new(stream:TcpStream) -> Self{
-        Self{
-            stream,
-            response:Response::build()
-        }
-    }
-    pub fn body(mut self,body:Vec<u8>){
-        self.response.body(body);
-    }
-}
-
-impl Drop for ResponseStream{
-    fn drop(&mut self) {
-        self.stream.write(&&self.response.raw()).unwrap();
-    }
 }
 impl<'a> Iterator for IncomingConnections<'a> {
     type Item = io::Result<(Request,ResponseStream)>;

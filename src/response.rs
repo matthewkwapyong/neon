@@ -1,6 +1,36 @@
 use crate::header::Headers;
 use std::collections::HashMap;
+use std::io::Write;
+use std::ops::Deref;
+use std::net::TcpStream;
 
+pub struct ResponseStream{
+    pub stream:TcpStream,
+    pub response:Response
+}
+impl Deref for ResponseStream {
+    type Target = Response;
+    fn deref(&self) -> &Self::Target {
+        &self.response
+    }
+}
+impl ResponseStream{
+    pub fn new(stream:TcpStream) -> Self{
+        Self{
+            stream,
+            response:Response::build()
+        }
+    }
+    pub fn body(mut self,body:Vec<u8>){
+        self.response.body(body);
+    }
+}
+
+impl Drop for ResponseStream{
+    fn drop(&mut self) {
+        self.stream.write(&&self.response.raw()).unwrap();
+    }
+}
 
 
 
