@@ -25,15 +25,11 @@ impl ResponseStream{
         self.response.body(body);
     }
 }
-
 impl Drop for ResponseStream{
     fn drop(&mut self) {
         self.stream.write(&&self.response.raw()).unwrap();
     }
 }
-
-
-
 #[derive(Debug, Clone)]
 pub struct Response {
     pub status: u16,

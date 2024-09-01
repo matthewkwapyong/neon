@@ -1,8 +1,8 @@
 use crate::header;
 use crate::header::Headers;
 use crate::Methods;
-use std::collections::HashMap;
-
+// use std::collections::HashMap;
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Request {
     method: Methods,
@@ -28,39 +28,29 @@ impl Request {
             // Return everything after the headers as the body
             body_startidx = header_end + 4;
         }
-        let var_name = &http_request_str[..body_startidx - 4];
-        let headers = var_name;
-        // println!("body idx {} \n\n\n\n\n\n\n {:?}",body_startidx,&headers);
-        let split_headers = headers.split("\r\n").collect::<Vec<&str>>();
+        
+        // println!("\n\n\n\n\n\n{}\n\n{}\n\n\n",body_startidx,body_startidx-4);
+        let header_str = &http_request_str[..body_startidx - 4];
+        let split_headers = header_str.split("\r\n").collect::<Vec<&str>>();
         // MPV = method path version
         let method_path_version: Vec<&str> = split_headers[0].split(" ").collect();
         let parsed_headers = header::Headers::new(&split_headers[1..]);
-        match method_path_version[0] {
-            "GET" => {
-                let body = http_request[body_startidx..].to_vec();
-                Request {
-                    method: Methods::Get,
-                    path: method_path_version[1].to_string(),
-                    version: method_path_version[2].to_string(),
-                    headers: parsed_headers,
-                    body_length: Some(body.len()),
-                    body: Some(body),
-                }
-            }
-            "POST" => {
-                let body = http_request[body_startidx..].to_vec();
-                Request {
-                    method: Methods::Post,
-                    path: method_path_version[1].to_string(),
-                    version: method_path_version[2].to_string(),
-                    headers: parsed_headers,
-                    body_length: Some(body.len()),
-                    body: Some(body),
-                }
-            }
-            _ => {
-                panic!("method error")
-            }
+        let method = match method_path_version[0] {
+            "GET" => Methods::Get,
+            "POST" => Methods::Post,
+            "PUT" => Methods::Put,
+            "OPTION" => Methods::Option,
+            "DELETE" => Methods::Delete,
+            _ => Methods::None
+        };
+        let body = http_request[body_startidx..].to_vec();
+        Request {
+            method: method,
+            path: method_path_version[1].to_string(),
+            version: method_path_version[2].to_string(),
+            headers: parsed_headers,
+            body_length: Some(body.len()),
+            body: Some(body),
         }
     }
     pub fn get_headers(&self) -> &Headers {
