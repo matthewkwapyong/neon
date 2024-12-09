@@ -1,4 +1,4 @@
-#Example
+# Example
 ```rust
 use neon::{Http, Methods, Router};
 fn main(){
@@ -8,7 +8,7 @@ fn main(){
 		res.body("hello world".as_bytes().to_vec())
 	});
 
-    route.get("/he", |_req, res| {
+    	route.get("/he", |_req, res| {
 	    res.insert("Content-type", " text/json");
 	    res.body(r#"{"name":"john"}"#.as_bytes().to_vec());
 	});
