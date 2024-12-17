@@ -1,3 +1,5 @@
+###This is a lightweight http server library
+
 # Example
 ```rust
 use neon::{Http, Methods, Router};
