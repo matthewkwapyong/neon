@@ -4,6 +4,7 @@ use request::Request;
 use response::{Response, ResponseStream};
 use std::io::Read;
 use std::io::{self, BufRead, BufReader};
+use std::iter;
 use std::net::TcpStream;
 use std::net::ToSocketAddrs;
 // use std::io::prelude::*;SocketAddr
@@ -28,12 +29,12 @@ pub struct Http {
     listener: TcpListener,
     workers: Vec<Worker>,
 }
-// #[derive(Clone)]
+#[derive(Clone)]
 pub struct Route {
     method: Methods,
     path: String,
     handler: fn(Request, &mut Response),
-    // middleware:Option<Vec<fn(Request, &mut Response)>>
+    middleware:Vec<fn(&mut Request, &mut Response)>
 }
 struct Worker {
     thread_handle: JoinHandle<()>,
@@ -78,29 +79,55 @@ pub struct IncomingConnections<'a> {
 //         Some(res)
 //     }
 // }
-pub struct Router {
-    routes: Vec<Route>,
-}
-impl Router {
-    pub fn new() -> Self {
-        Router { routes: Vec::new() }
-    }
-    pub fn get(&mut self, path: &str, handler: fn(Request, &mut Response)) {
-        self.routes.push(Route {
+impl Route{
+    pub fn get(path: &str, handler: fn(Request, &mut Response)) -> Self {
+        Route {
             method: Methods::Get,
             path: path.to_string(),
             handler,
-            // middleware: todo!(),
-        });
+            middleware:Vec::new(),
+        }
     }
-    pub fn post(&mut self, path: &str, handler: fn(Request, &mut Response)) {
-        self.routes.push(Route {
+    pub fn post(path: &str, handler: fn(Request, &mut Response)) -> Self {
+        Route {
             method: Methods::Post,
             path: path.to_string(),
             handler,
-            // middleware: todo!(),
-        });
+            middleware:Vec::new(),
+        }
     }
+    pub fn set_middleware(mut self,handler: fn(&mut Request, &mut Response)) -> Self{
+        self.middleware.push(handler);
+        self
+    }
+}
+pub struct Router {
+    routes: Vec<Route>,
+    middleware:Vec<fn(&mut Request, &mut Response)>
+}
+
+impl Router {
+    pub fn new() -> Self {
+        Router { routes: Vec::new(),middleware:Vec::new() }
+    }
+    pub fn route(&mut self, handler: Route) {
+        self.routes.push(handler);
+    }
+    pub fn set_routes(&mut self,routes:Vec<Route>){
+        for i in routes{
+            self.routes.push(i);
+        }
+    }
+    pub fn set_middleware(mut self,handler: fn(&mut Request, &mut Response)) -> Self{
+        self.middleware.push(handler);
+        self
+    }
+    // pub fn get(&mut self, handler: Route) {
+    //     self.routes.push(handler);
+    // }
+    // pub fn post(&mut self, path: &str, handler: Route) {
+    //     self.routes.push(handler);
+    // }
 }
 impl Http {
     pub fn new<A: ToSocketAddrs>(addr: A) -> Result<Http, std::io::Error> {
@@ -142,23 +169,30 @@ impl Http {
     }
     pub fn listen(&mut self, route: Router) {
         let routes = Arc::new(route.routes);
+        let middleware = Arc::new(route.middleware);
+
         for stream in self.listener.incoming() {
             // println!("workers\n {}",self.workers.len());
             let mut stream = stream.unwrap();
             let route = Arc::clone(&routes);
             let worker = thread::spawn(move || {
                 let mut seen = false; 
-                let (request, mut stream) = match Request::new(stream){
+                let (mut request, mut stream) = match Request::new(stream){
                     Ok((req,s)) => (req,s),
                     Err(err) => panic!("Error: {}",err),
                 };
-                println!("{:?}->{:?}",request.get_method(),request.get_path());
-                // println!("closing after send");
-                // println!("{:?}",request.get_headers());
+                // println!("{:?} -> {:?}",request.get_method(),request.get_path());
+              
                 for i in route.iter() {
                     if &i.method == request.get_method() && &i.path == request.get_path() {
                         seen = true;
                         let mut response = Response::build();
+                        let mut requestt = &mut request;
+                        if i.middleware.len() != 0{
+                            for j in i.middleware.iter(){
+                                (j)(requestt, &mut response);
+                            }
+                        }
                         (i.handler)(request, &mut response);
                         let response: Vec<u8> = response.raw();
                         stream.write(&response).unwrap();
