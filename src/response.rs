@@ -1,12 +1,12 @@
 use crate::header::Headers;
 use std::collections::HashMap;
 use std::io::Write;
-use std::ops::Deref;
 use std::net::TcpStream;
+use std::ops::Deref;
 
-pub struct ResponseStream{
-    pub stream:TcpStream,
-    pub response:Response
+pub struct ResponseStream {
+    pub stream: TcpStream,
+    pub response: Response,
 }
 impl Deref for ResponseStream {
     type Target = Response;
@@ -14,18 +14,18 @@ impl Deref for ResponseStream {
         &self.response
     }
 }
-impl ResponseStream{
-    pub fn new(stream:TcpStream) -> Self{
-        Self{
+impl ResponseStream {
+    pub fn new(stream: TcpStream) -> Self {
+        Self {
             stream,
-            response:Response::build()
+            response: Response::build(),
         }
     }
-    pub fn body(mut self,body:Vec<u8>){
-        self.response.body(body);
+    pub fn body(mut self, body: Vec<u8>) {
+        self.response.body = body;
     }
 }
-impl Drop for ResponseStream{
+impl Drop for ResponseStream {
     fn drop(&mut self) {
         self.stream.write(&&self.response.raw()).unwrap();
     }
@@ -46,7 +46,10 @@ impl Response {
             body: Vec::new(),
         }
     }
-    pub fn insert(&mut self, head: &str, value: &str) {
+    pub fn status(&mut self, status: u16) {
+        self.status = status;
+    }
+    pub fn set_header(&mut self, head: &str, value: &str) {
         // self.headers.push( format!("{}: {}",head.to_string(),value.to_string()))
         self.headers
             .headers
@@ -55,7 +58,13 @@ impl Response {
     pub fn body(&mut self, data: Vec<u8>) {
         self.body = data;
     }
-
+    pub fn body_with_type<T: Body>(mut self, data: T) {
+        let data = data.raw();
+        self.headers
+            .headers
+            .insert("Content-type".to_string(), data.0);
+        self.body = data.1;
+    }
     pub fn raw(&mut self) -> Vec<u8> {
         // self.headers.push("\r\n".to_string());
         let mut response: Vec<u8> = vec![];
@@ -65,11 +74,11 @@ impl Response {
         let header_raw = Headers::parse_to_u8(&self.headers);
         response.extend(code);
         response.extend(&header_raw);
-        response.extend("\r\n\r\n".as_bytes());
+        response.extend(b"\r\n\r\n");
         response.extend(&self.body);
         response
     }
 }
-pub trait Body{
-     fn raw() -> Vec<u8>;
+pub trait Body {
+    fn raw(self) -> (String, Vec<u8>);
 }
