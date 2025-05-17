@@ -1,14 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-// pub struct Headers {
-//     pub headers: Vec<Header>,
-// }
-// #[derive(Serialize, Deserialize, Debug, Clone)]
-// pub struct altHeader {
-//     pub header: String,
-//     pub value: String,
-// }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Headers {
     pub headers: HashMap<String, String>,
