@@ -5,8 +5,6 @@ use std::collections::HashMap;
 pub struct Headers {
     pub headers: HashMap<String, String>,
 }
-// rustc header.rs && ./header
-
 impl Headers {
     pub fn new(split_data: &[&str]) -> Headers {
         let mut map = HashMap::new();
@@ -33,7 +31,6 @@ impl Headers {
             raw.push(format!("{}: {}", header, value));
         }
         let response: Vec<u8> = raw.join("\r\n").to_string().into_bytes();
-        // response.extend(format!("NotFound",).as_bytes());
         response
     }
     fn split_header(data: String) -> (String, String) {
@@ -51,13 +48,3 @@ impl Headers {
         parsed_data
     }
 }
-
-// fn main(){
-//     let a = Headers::new(String::from("
-//     GET /search?q=test HTTP/2
-//     Host: www.bing.com
-//     User-Agent: curl/7.54.0
-//     Accept: */*
-//     "));
-
-// }
