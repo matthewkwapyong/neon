@@ -1,12 +1,8 @@
 use std::io::{Read, Write};
 use std::net::TcpStream;
-
 use crate::header;
 use crate::header::Headers;
 use crate::http::Methods;
-// use crate::response::Body;
-// use std::collections::HashMap;
-// const CRLF:&str = "\r\n";
 #[derive(Debug, Clone)]
 pub struct Body(pub Vec<u8>);
 
@@ -33,7 +29,6 @@ impl Request {
         loop {
             let bytes_read = match stream.read(&mut temp_buf) {
                 Ok(0) => {
-                    // println!("sassasaa");
                     stream
                         .write_all(b"HTTP/1.1 400 Bad Request\r\n\r\n")
                         .unwrap();
@@ -58,7 +53,6 @@ impl Request {
             }
         }
         let header_str: String = String::from_utf8_lossy(&request_buffer).to_string();
-        // println!("{}", header_str);
         let split_headers = header_str.split("\r\n").collect::<Vec<&str>>();
         let parsed_headers = header::Headers::new(&split_headers[1..]);
         let method_path_version: Vec<&str> = split_headers[0].split(" ").collect();
@@ -90,9 +84,6 @@ impl Request {
             .unwrap_or(&"0".to_string())
             .parse::<usize>()
             .unwrap_or(0);
-
-        // println!("{} {}",content_length,request_buffer.len());
-
         let mut body = request_buffer[headers_end..].to_vec();
         let mut remaining = content_length.saturating_sub(body.len());
         while remaining > 0 {
