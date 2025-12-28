@@ -10,7 +10,7 @@ fn main(){
 		res.body("hello world".as_bytes().to_vec())
 	});
 
-    	route.get("/person", |_req, res| {
+	route.get("/person", |_req, res| {
 	    res.insert("Content-type", " text/json");
 	    res.body(r#"{"name":"Smith"}"#.as_bytes().to_vec());
 	});
