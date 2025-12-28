@@ -10,9 +10,9 @@ fn main(){
 		res.body("hello world".as_bytes().to_vec())
 	});
 
-    	route.get("/he", |_req, res| {
+    	route.get("/person", |_req, res| {
 	    res.insert("Content-type", " text/json");
-	    res.body(r#"{"name":"john"}"#.as_bytes().to_vec());
+	    res.body(r#"{"name":"Smith"}"#.as_bytes().to_vec());
 	});
 	
     app.listen(route)
